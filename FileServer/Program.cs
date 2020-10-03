@@ -155,12 +155,30 @@ namespace FileServer
 					File.WriteAllBytes(copyPath, fileData);
 			}
 
+			public void Visit(FileMoveCommand command)
+			{
+				if (command.PreMoveTree == null) return;
+				if (!TryPrefixedGetPathTo(command.PreMoveTree, command.FileId, out var filePath)) return;
+				if (!TryPrefixedGetPathTo(command.PreMoveTree, command.DestinationDirectoryId,
+					out var destinationDirectoryPath)) return;
+
+				var fileName = Path.GetFileName(filePath);
+				var destinationFilePath = Path.Combine(destinationDirectoryPath, fileName);
+				File.Move(filePath, destinationFilePath);
+			}
+
 			private bool TryPrefixedGetPathTo(int nodeId, out string path) =>
 				TryPrefixedGetPathTo(nodeId, out path, out _);
 
-			private bool TryPrefixedGetPathTo(int nodeId, out string path, out string normalPath)
+			private bool TryPrefixedGetPathTo(int nodeId, out string path, out string normalPath) =>
+				TryPrefixedGetPathTo(_root, nodeId, out path, out normalPath);
+
+			private bool TryPrefixedGetPathTo(INode root, int nodeId, out string path) =>
+				TryPrefixedGetPathTo(root, nodeId, out path, out _);
+
+			private bool TryPrefixedGetPathTo(INode root, int nodeId, out string path, out string normalPath)
 			{
-				if (!TryGetPathTo(_root, nodeId, out normalPath))
+				if (!TryGetPathTo(root, nodeId, out normalPath))
 				{
 					path = default!;
 					return false;

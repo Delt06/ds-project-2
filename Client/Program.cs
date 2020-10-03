@@ -131,6 +131,20 @@ namespace Client
 						break;
 					}
 
+					case "FileMove":
+					{
+						Console.Write("Enter file ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var fileId))
+							goto default;
+
+						Console.Write("Enter destination directory ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var destinationDirectoryId))
+							goto default;
+
+						command = new FileMoveCommand(fileId, destinationDirectoryId);
+						break;
+					}
+
 					default:
 						Console.WriteLine("Invalid input.");
 						continue;

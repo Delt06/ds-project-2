@@ -285,7 +285,7 @@ namespace NameServer
 			{
 				Visit((ICommand) command);
 
-				if (_root.TryFindNode(command.DirectoryId, out var node) &&
+				if (_root.TryFindNode(command.Id, out var node) &&
 				    node is Directory directory)
 				{
 					var formattedChildren = directory.Children
@@ -294,7 +294,7 @@ namespace NameServer
 				}
 				else
 				{
-					OnDirectoryDoesNotExist(command.DirectoryId);
+					OnDirectoryDoesNotExist(command.Id);
 				}
 			}
 
@@ -339,6 +339,33 @@ namespace NameServer
 					{
 						var copy = Factory.CreateFile(command.CopyName, file.Size);
 						parentDirectory.Children.Add(copy);
+					}
+				}
+				else
+				{
+					Message = $"Node with {command.FileId} either does not exist or has no parent.";
+				}
+			}
+
+			public void Visit(FileMoveCommand command)
+			{
+				Visit((ICommand) command);
+				command.PreMoveTree = _root.Clone();
+
+				if (_root.TryFindNode(command.FileId, out var file) &&
+				    file is File &&
+				    _root.TryFindParent(command.FileId, out var directoryNode) &&
+				    directoryNode is Directory directory)
+				{
+					if (_root.TryFindNode(command.DestinationDirectoryId, out var destinationDirectoryNode) &&
+					    destinationDirectoryNode is Directory destinationDirectory)
+					{
+						directory.Children.Remove(file);
+						destinationDirectory.Children.Add(file);
+					}
+					else
+					{
+						OnDirectoryDoesNotExist(command.DestinationDirectoryId);
 					}
 				}
 				else

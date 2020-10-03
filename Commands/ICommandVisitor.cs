@@ -13,5 +13,6 @@
 		void Visit(DownloadFileCommand command);
 		void Visit(FileInfoCommand command);
 		void Visit(FileCopyCommand command);
+		void Visit(FileMoveCommand command);
 	}
 }
