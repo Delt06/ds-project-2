@@ -8,7 +8,7 @@ namespace Commands
 		public int Id { get; set; }
 
 		public DownloadFileCommand(int nodeId) => Id = nodeId;
-		
+
 		public void Accept(ICommandVisitor visitor)
 		{
 			visitor.Visit(this);

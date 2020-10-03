@@ -24,11 +24,8 @@ namespace Client
 			_socket.SendCompletelyWithEof(command.ToBytes());
 		}
 
-		public ICommand Receive()
-		{
-			return _socket.ReceiveUntilEof(_buffer).To<ICommand>();
-		}
-		
+		public ICommand Receive() => _socket.ReceiveUntilEof(_buffer).To<ICommand>();
+
 		public void Dispose()
 		{
 			if (_disposed) return;

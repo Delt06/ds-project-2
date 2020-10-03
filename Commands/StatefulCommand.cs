@@ -6,7 +6,7 @@ namespace NameServer
 {
 	[Serializable]
 	public sealed class StatefulCommand : ICommand
-	{ 
+	{
 		public INode Root { get; set; }
 		public ICommand InnerCommand { get; set; }
 

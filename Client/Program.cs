@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Net;
 using Commands;
 using Networking;
-using Directory = Files.Directory;
 
 namespace Client
 {
-	class Program
+	internal class Program
 	{
-		static void Main(string[] args)
+		private static void Main(string[] args)
 		{
 			var address = IpAddressUtils.GetLocal();
 			var local = new IPEndPoint(address, 55555);
@@ -23,7 +21,7 @@ namespace Client
 
 				var input = Console.ReadLine()?.Trim() ?? string.Empty;
 				ICommand command;
-				
+
 				switch (input)
 				{
 					case "Exit":
@@ -48,7 +46,7 @@ namespace Client
 						Console.Write("Enter node ID: ");
 						if (!int.TryParse(Console.ReadLine(), out var id))
 							goto default;
-						
+
 						command = new DeleteCommand(id);
 						break;
 					}
@@ -58,10 +56,10 @@ namespace Client
 						Console.Write("Enter parent directory ID: ");
 						if (!int.TryParse(Console.ReadLine(), out var id))
 							goto default;
-						
+
 						Console.Write("Enter directory name: ");
 						var directoryName = Console.ReadLine() ?? string.Empty;
-						
+
 						command = new MakeDirectoryCommand(id, directoryName);
 						break;
 					}
@@ -71,7 +69,7 @@ namespace Client
 						Console.Write("Enter directory ID: ");
 						if (!int.TryParse(Console.ReadLine(), out var id))
 							goto default;
-						
+
 						Console.Write("Enter file path: ");
 						var path = Console.ReadLine() ?? string.Empty;
 						if (!File.Exists(path))
@@ -95,7 +93,7 @@ namespace Client
 						Console.Write("Enter directory ID: ");
 						if (!int.TryParse(Console.ReadLine(), out var id))
 							goto default;
-						
+
 						command = new ReadDirectoryCommand(id);
 						break;
 					}
@@ -105,7 +103,7 @@ namespace Client
 						Console.Write("Enter file ID: ");
 						if (!int.TryParse(Console.ReadLine(), out var id))
 							goto default;
-						
+
 						command = new DownloadFileCommand(id);
 						break;
 					}
@@ -122,11 +120,11 @@ namespace Client
 				if (response is PayloadResponseCommand payloadResponse)
 				{
 					Console.WriteLine(payloadResponse.PayloadPath);
-					
+
 					var directory = Path.GetDirectoryName(payloadResponse.PayloadPath);
 					if (!string.IsNullOrWhiteSpace(directory))
-						System.IO.Directory.CreateDirectory(directory);
-					
+						Directory.CreateDirectory(directory);
+
 					File.WriteAllBytes(payloadResponse.PayloadPath, payloadResponse.Payload);
 				}
 

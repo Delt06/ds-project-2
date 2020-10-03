@@ -13,7 +13,7 @@ namespace Commands
 			DirectoryId = directoryId;
 			Name = name;
 		}
-		
+
 		public void Accept(ICommandVisitor visitor)
 		{
 			visitor.Visit(this);

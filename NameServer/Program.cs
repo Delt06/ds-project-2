@@ -17,7 +17,7 @@ namespace NameServer
 		private static readonly ConcurrentQueue<ICommand> Responses = new ConcurrentQueue<ICommand>();
 		private static readonly TreeFactory Factory = new TreeFactory();
 		private static INode _root = Factory.CreateDirectory("root");
-		
+
 		private static void Main(string[] args)
 		{
 			var queues = StartFileServerThreads();
@@ -27,13 +27,13 @@ namespace NameServer
 			var endpoint = new IPEndPoint(address, 55556);
 			socket.Bind(endpoint);
 			socket.Listen(1);
-			
+
 			Initialize();
 
 			while (true)
 			{
 				using var client = socket.Accept();
-				
+
 				Console.WriteLine("A client has connected.");
 				HandleClient(client, queues);
 				Console.WriteLine("A client has disconnected.");
@@ -64,7 +64,7 @@ namespace NameServer
 				threads[i] = new Thread(arg =>
 				{
 					var buffer = new byte[32000];
-					
+
 					while (true)
 					{
 						try
@@ -77,7 +77,7 @@ namespace NameServer
 							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
 							socket.Connect(remote);
 							Console.WriteLine($"Connected to file server {serverIndex + 1}.");
-					
+
 							var commands = queues[serverIndex];
 
 							while (true)
@@ -112,7 +112,7 @@ namespace NameServer
 		{
 			var visitor = new ExecuteCommandVisitor();
 			var buffer = new byte[32000];
-			
+
 			while (!visitor.Exit)
 			{
 				var data = client.ReceiveUntilEof(buffer);
@@ -131,20 +131,17 @@ namespace NameServer
 				if (visitor.AwaitResponse)
 				{
 					ICommand response;
-					
-					while (!Responses.TryDequeue(out response!) || 
+
+					while (!Responses.TryDequeue(out response!) ||
 					       !(response is PayloadResponseCommand payloadResponse) ||
-					       !payloadResponse.Root.Equals(_root))
-					{
-						
-					}
-					
-					client.SendCompletelyWithEof(response.ToBytes());	
+					       !payloadResponse.Root.Equals(_root)) { }
+
+					client.SendCompletelyWithEof(response.ToBytes());
 				}
 				else
 				{
 					var response = new ResponseCommand(receivedCommand, visitor.Message);
-					client.SendCompletelyWithEof(response.ToBytes());	
+					client.SendCompletelyWithEof(response.ToBytes());
 				}
 			}
 		}
@@ -154,7 +151,7 @@ namespace NameServer
 			public bool Exit { get; private set; }
 			public string? Message { get; private set; }
 			public bool AwaitResponse { get; private set; }
-			
+
 			public void Visit(ICommand command)
 			{
 				Exit = false;
@@ -214,15 +211,11 @@ namespace NameServer
 				}
 
 				if (_root.TryFindNode(command.NodeId, out var node) &&
-					_root.TryFindParent(command.NodeId, out var parent) &&
+				    _root.TryFindParent(command.NodeId, out var parent) &&
 				    parent is Directory parentDirectory)
-				{
 					parentDirectory.Children.Remove(node);
-				}
 				else
-				{
 					Message = $"Node with {command.NodeId} either does not exist or has no parent.";
-				}
 			}
 
 			public void Visit(MakeDirectoryCommand command)
@@ -304,13 +297,9 @@ namespace NameServer
 
 				if (_root.TryFindNode(command.Id, out var node) &&
 				    node is File)
-				{
 					AwaitResponse = true;
-				}
 				else
-				{
 					OnFileDoesNotExist(command.Id);
-				}
 			}
 
 			private void OnFileDoesNotExist(int fileId)

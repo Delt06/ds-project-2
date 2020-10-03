@@ -33,13 +33,14 @@ namespace Files
 
 		public readonly List<INode> Children = new List<INode>();
 		object ICloneable.Clone() => Clone();
-		
+
 		public bool Equals(INode? other) => Equals((object?) other);
 
-		private bool Equals(Directory other) => Children.ToHashSet().SetEquals(other.Children.ToHashSet()) && 
+		private bool Equals(Directory other) => Children.ToHashSet().SetEquals(other.Children.ToHashSet()) &&
 		                                        Id == other.Id && Name == other.Name;
 
-		public override bool Equals(object? obj) => ReferenceEquals(this, obj) || obj is Directory other && Equals(other);
+		public override bool Equals(object? obj) =>
+			ReferenceEquals(this, obj) || obj is Directory other && Equals(other);
 
 		public override int GetHashCode() => HashCode.Combine(Children, Id, Name);
 	}

@@ -5,7 +5,7 @@ namespace Commands
 	[Serializable]
 	public class ResponseCommand : ICommand
 	{
-		public string? Message { get; set; } 
+		public string? Message { get; set; }
 		public ICommand Request { get; set; }
 
 		public ResponseCommand(ICommand request, string? message = null)

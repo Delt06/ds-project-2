@@ -36,10 +36,7 @@
 					return true;
 				}
 
-				if (TryFindNode(child, childId, out parent))
-				{
-					return true;
-				}
+				if (TryFindNode(child, childId, out parent)) return true;
 			}
 
 			parent = default!;

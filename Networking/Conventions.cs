@@ -14,13 +14,13 @@ namespace Networking
 		{
 			for (var start = 0; start < length - EofBytes.Length + 1; start++)
 			{
-				var correct = true; 
-				
+				var correct = true;
+
 				for (var index = 0; index < EofBytes.Length; index++)
 				{
 					var totalIndex = start + index;
 					if (buffer[totalIndex] == EofBytes[index]) continue;
-					
+
 					correct = false;
 					break;
 				}
