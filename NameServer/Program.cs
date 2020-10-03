@@ -14,6 +14,7 @@ namespace NameServer
 {
 	internal static class Program
 	{
+		private static readonly ConcurrentQueue<ICommand> Responses = new ConcurrentQueue<ICommand>();
 		private static readonly TreeFactory Factory = new TreeFactory();
 		private static INode _root = Factory.CreateDirectory("root");
 		
@@ -85,6 +86,7 @@ namespace NameServer
 
 								socket.SendCompletelyWithEof(command.ToBytes());
 								var response = socket.ReceiveUntilEof(buffer).To<ICommand>();
+								Responses.Enqueue(response);
 								Console.WriteLine($"Synchronized with file server {serverIndex + 1}: {response}");
 							}
 						}
@@ -126,8 +128,24 @@ namespace NameServer
 					queue.Enqueue(statefulCommand);
 				}
 
-				var response = new ResponseCommand(receivedCommand, visitor.Message);
-				client.SendCompletelyWithEof(response.ToBytes());
+				if (visitor.AwaitResponse)
+				{
+					ICommand response;
+					
+					while (!Responses.TryDequeue(out response!) || 
+					       !(response is PayloadResponseCommand payloadResponse) ||
+					       !payloadResponse.Root.Equals(_root))
+					{
+						
+					}
+					
+					client.SendCompletelyWithEof(response.ToBytes());	
+				}
+				else
+				{
+					var response = new ResponseCommand(receivedCommand, visitor.Message);
+					client.SendCompletelyWithEof(response.ToBytes());	
+				}
 			}
 		}
 
@@ -135,11 +153,13 @@ namespace NameServer
 		{
 			public bool Exit { get; private set; }
 			public string? Message { get; private set; }
+			public bool AwaitResponse { get; private set; }
 			
 			public void Visit(ICommand command)
 			{
 				Exit = false;
 				Message = null;
+				AwaitResponse = false;
 			}
 
 			public void Visit(ExitCommand command)
@@ -276,6 +296,26 @@ namespace NameServer
 				{
 					OnDirectoryDoesNotExist(command.DirectoryId);
 				}
+			}
+
+			public void Visit(DownloadFileCommand command)
+			{
+				Visit((ICommand) command);
+
+				if (_root.TryFindNode(command.Id, out var node) &&
+				    node is File)
+				{
+					AwaitResponse = true;
+				}
+				else
+				{
+					OnFileDoesNotExist(command.Id);
+				}
+			}
+
+			private void OnFileDoesNotExist(int fileId)
+			{
+				Message = $"File with ID {fileId} does not exist.";
 			}
 		}
 	}

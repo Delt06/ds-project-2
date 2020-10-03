@@ -10,5 +10,6 @@
 		void Visit(UploadFileCommand command);
 		void Visit(InitializeCommand command);
 		void Visit(ReadDirectoryCommand command);
+		void Visit(DownloadFileCommand command);
 	}
 }

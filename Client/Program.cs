@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using Commands;
 using Networking;
+using Directory = Files.Directory;
 
 namespace Client
 {
@@ -98,13 +100,35 @@ namespace Client
 						break;
 					}
 
+					case "DownloadFile":
+					{
+						Console.Write("Enter file ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var id))
+							goto default;
+						
+						command = new DownloadFileCommand(id);
+						break;
+					}
+
 					default:
 						Console.WriteLine("Invalid input.");
 						continue;
 				}
 
 				connection.Send(command);
-				Console.WriteLine(connection.Receive());
+				var response = connection.Receive();
+				Console.WriteLine(response);
+
+				if (response is PayloadResponseCommand payloadResponse)
+				{
+					Console.WriteLine(payloadResponse.PayloadPath);
+					
+					var directory = Path.GetDirectoryName(payloadResponse.PayloadPath);
+					if (!string.IsNullOrWhiteSpace(directory))
+						System.IO.Directory.CreateDirectory(directory);
+					
+					File.WriteAllBytes(payloadResponse.PayloadPath, payloadResponse.Payload);
+				}
 
 				if (command is ExitCommand)
 					return;

@@ -3,7 +3,7 @@
 namespace Commands
 {
 	[Serializable]
-	public sealed class ResponseCommand : ICommand
+	public class ResponseCommand : ICommand
 	{
 		public string? Message { get; set; } 
 		public ICommand Request { get; set; }

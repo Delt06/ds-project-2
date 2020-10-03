@@ -41,8 +41,11 @@ namespace FileServer
 				var visitor = new CommandHandleVisitor(_lastTree, prefix);
 				command.Accept(visitor);
 				Console.WriteLine($"Handled {command}.");
-				
-				var response = new ResponseCommand(command);
+
+				ICommand response = visitor.Payload.Length > 0 ? 
+					new PayloadResponseCommand(command, visitor.Payload, visitor.PayloadPath, _lastTree) : 
+					new ResponseCommand(command);
+
 				client.SendCompletelyWithEof(response.ToBytes());
 				
 				Console.WriteLine("Sent response.");
@@ -53,6 +56,9 @@ namespace FileServer
 
 		private class CommandHandleVisitor : ICommandVisitor
 		{
+			public byte[] Payload { get; private set; } = Array.Empty<byte>();
+			public string PayloadPath { get; private set; } = string.Empty;
+			
 			private readonly INode _root;
 			private readonly string _pathPrefix;
 
@@ -74,7 +80,7 @@ namespace FileServer
 
 			public void Visit(CreateFileCommand command)
 			{
-				if (!TryGetPathTo(command.DirectoryId, out var pathToDirectory)) return;
+				if (!TryPrefixedGetPathTo(command.DirectoryId, out var pathToDirectory)) return;
 				
 				var path = Path.Combine(pathToDirectory, command.Name);
 				Directory.CreateDirectory(pathToDirectory);
@@ -87,7 +93,7 @@ namespace FileServer
 
 			public void Visit(DeleteCommand command)
 			{
-				if (!TryGetPathTo(command.NodeId, out var path)) return;
+				if (!TryPrefixedGetPathTo(command.NodeId, out var path)) return;
 				
 				if (File.Exists(path))
 					File.Delete(path);
@@ -97,7 +103,7 @@ namespace FileServer
 
 			public void Visit(MakeDirectoryCommand command)
 			{
-				if (!TryGetPathTo(command.ParentDirectoryId, out var pathToParent)) return;
+				if (!TryPrefixedGetPathTo(command.ParentDirectoryId, out var pathToParent)) return;
 				
 				var path = Path.Combine(pathToParent, command.Name);
 				Directory.CreateDirectory(path);
@@ -105,7 +111,7 @@ namespace FileServer
 
 			public void Visit(UploadFileCommand command)
 			{
-				if (!TryGetPathTo(command.DirectoryId, out var directoryPath)) return;
+				if (!TryPrefixedGetPathTo(command.DirectoryId, out var directoryPath)) return;
 				
 				Directory.CreateDirectory(directoryPath);
 				
@@ -124,7 +130,7 @@ namespace FileServer
 
 			public void Visit(InitializeCommand command)
 			{
-				if (!TryGetPathTo(_root.Id, out var path)) return;
+				if (!TryPrefixedGetPathTo(_root.Id, out var path)) return;
 				
 				if (Directory.Exists(path))
 					Directory.Delete(path, true);
@@ -135,11 +141,29 @@ namespace FileServer
 				
 			}
 
-			private bool TryGetPathTo(int nodeId, out string path)
+			public void Visit(DownloadFileCommand command)
 			{
-				if (!TryGetPathTo(_root, nodeId, out path)) return false;
+				if (!TryPrefixedGetPathTo(command.Id, out var path, out var normalPath)) return;
+				if (!File.Exists(path)) return;
+				
+				Payload = File.ReadAllBytes(path);
+				PayloadPath = normalPath;
+			}
 
-				path = _pathPrefix + path;
+			private bool TryPrefixedGetPathTo(int nodeId, out string path)
+			{
+				return TryPrefixedGetPathTo(nodeId, out path, out _);
+			}
+			
+			private bool TryPrefixedGetPathTo(int nodeId, out string path, out string normalPath)
+			{
+				if (!TryGetPathTo(_root, nodeId, out normalPath))
+				{
+					path = default!;
+					return false;
+				}
+
+				path = _pathPrefix + normalPath;
 				return true;
 			}
 
