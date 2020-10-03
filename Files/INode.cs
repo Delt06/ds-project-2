@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Files
 {
-	public interface INode : ICloneable
+	public interface INode : ICloneable, IEquatable<INode>
 	{
 		int Id { get; }
 		string Name { get; }
