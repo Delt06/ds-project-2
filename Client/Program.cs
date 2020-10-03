@@ -88,6 +88,16 @@ namespace Client
 						command = new InitializeCommand();
 						break;
 
+					case "ReadDirectory":
+					{
+						Console.Write("Enter directory ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var id))
+							goto default;
+						
+						command = new ReadDirectoryCommand(id);
+						break;
+					}
+
 					default:
 						Console.WriteLine("Invalid input.");
 						continue;

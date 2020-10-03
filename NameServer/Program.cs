@@ -83,8 +83,7 @@ namespace NameServer
 							{
 								if (!commands.TryDequeue(out var command)) continue;
 
-								socket.SendCompletely(command.ToBytes());
-								socket.SendCompletely(Conventions.Eof);
+								socket.SendCompletelyWithEof(command.ToBytes());
 								var response = socket.ReceiveUntilEof(buffer).To<ICommand>();
 								Console.WriteLine($"Synchronized with file server {serverIndex + 1}: {response}");
 							}
@@ -128,8 +127,7 @@ namespace NameServer
 				}
 
 				var response = new ResponseCommand(receivedCommand, visitor.Message);
-				client.SendCompletely(response.ToBytes());
-				client.SendCompletely(Conventions.Eof);
+				client.SendCompletelyWithEof(response.ToBytes());
 			}
 		}
 
@@ -261,6 +259,23 @@ namespace NameServer
 			{
 				Visit((ICommand) command);
 				Initialize();
+			}
+
+			public void Visit(ReadDirectoryCommand command)
+			{
+				Visit((ICommand) command);
+
+				if (_root.TryFindNode(command.DirectoryId, out var node) &&
+				    node is Directory directory)
+				{
+					var formattedChildren = directory.Children
+						.Select(c => $"({c.Name} ID={c.Id})");
+					Message = string.Join(",", formattedChildren);
+				}
+				else
+				{
+					OnDirectoryDoesNotExist(command.DirectoryId);
+				}
 			}
 		}
 	}

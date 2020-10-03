@@ -21,8 +21,7 @@ namespace Client
 
 		public void Send(ICommand command)
 		{
-			_socket.SendCompletely(command.ToBytes());
-			_socket.SendCompletely(Conventions.Eof);
+			_socket.SendCompletelyWithEof(command.ToBytes());
 		}
 
 		public ICommand Receive()

@@ -37,5 +37,11 @@ namespace Networking
 					break;
 			}
 		}
+
+		public static void SendCompletelyWithEof(this Socket socket, ReadOnlySpan<byte> data)
+		{
+			socket.SendCompletely(data);
+			socket.SendCompletely(Conventions.Eof);
+		}
 	}
 }

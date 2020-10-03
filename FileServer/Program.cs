@@ -43,8 +43,7 @@ namespace FileServer
 				Console.WriteLine($"Handled {command}.");
 				
 				var response = new ResponseCommand(command);
-				client.SendCompletely(response.ToBytes());
-				client.SendCompletely(Conventions.Eof);
+				client.SendCompletelyWithEof(response.ToBytes());
 				
 				Console.WriteLine("Sent response.");
 			}
@@ -106,7 +105,21 @@ namespace FileServer
 
 			public void Visit(UploadFileCommand command)
 			{
-				throw new NotImplementedException();
+				if (!TryGetPathTo(command.DirectoryId, out var directoryPath)) return;
+				
+				Directory.CreateDirectory(directoryPath);
+				
+				var path = Path.Combine(directoryPath, command.Name);
+
+				if (!File.Exists(path))
+				{
+					using var file = File.Create(path);
+					file.Write(command.Data);
+				}
+				else
+				{
+					File.WriteAllBytes(path, command.Data);	
+				}
 			}
 
 			public void Visit(InitializeCommand command)
@@ -115,6 +128,11 @@ namespace FileServer
 				
 				if (Directory.Exists(path))
 					Directory.Delete(path, true);
+			}
+
+			public void Visit(ReadDirectoryCommand command)
+			{
+				
 			}
 
 			private bool TryGetPathTo(int nodeId, out string path)
