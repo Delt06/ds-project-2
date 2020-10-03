@@ -32,5 +32,7 @@ namespace Files
 		public override bool Equals(object? obj) => ReferenceEquals(this, obj) || obj is File other && Equals(other);
 
 		public override int GetHashCode() => HashCode.Combine(Id, Name);
+
+		public override string ToString() => Id.ToString();
 	}
 }

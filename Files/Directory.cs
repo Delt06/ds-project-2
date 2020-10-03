@@ -43,5 +43,7 @@ namespace Files
 			ReferenceEquals(this, obj) || obj is Directory other && Equals(other);
 
 		public override int GetHashCode() => HashCode.Combine(Children, Id, Name);
+
+		public override string ToString() => $"{Id}: {{{string.Join(", ", Children)}}}";
 	}
 }

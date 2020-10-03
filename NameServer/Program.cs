@@ -134,9 +134,24 @@ namespace NameServer
 					{
 						ICommand response;
 
-						while (!Responses.TryDequeue(out response!) ||
-						       !(response is PayloadResponseCommand payloadResponse) ||
-						       !payloadResponse.Root.Equals(_root)) { }
+						while (true)
+						{
+							if (!Responses.TryDequeue(out response!)) continue;
+
+							if (!(response is PayloadResponseCommand payloadResponse))
+							{
+								Console.WriteLine("Response has no payload.");
+								continue;
+							}
+
+							if (!payloadResponse.Root.Equals(_root))
+							{
+								Console.WriteLine("Response tree is different.");
+								continue;
+							}
+
+							break;
+						}
 
 						client.SendCompletelyWithEof(response.ToBytes());
 					}
