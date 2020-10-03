@@ -12,5 +12,6 @@
 		void Visit(ReadDirectoryCommand command);
 		void Visit(DownloadFileCommand command);
 		void Visit(FileInfoCommand command);
+		void Visit(FileCopyCommand command);
 	}
 }

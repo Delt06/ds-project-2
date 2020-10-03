@@ -141,9 +141,18 @@ namespace FileServer
 				PayloadPath = normalPath;
 			}
 
-			public void Visit(FileInfoCommand command)
+			public void Visit(FileInfoCommand command) { }
+
+			public void Visit(FileCopyCommand command)
 			{
-				
+				if (!TryPrefixedGetPathTo(command.FileId, out var path)) return;
+
+				var directory = Path.GetDirectoryName(path) ?? string.Empty;
+				var fileData = File.ReadAllBytes(path);
+				var copyPath = Path.Combine(directory, command.CopyName);
+
+				if (!File.Exists(copyPath))
+					File.WriteAllBytes(copyPath, fileData);
 			}
 
 			private bool TryPrefixedGetPathTo(int nodeId, out string path) =>

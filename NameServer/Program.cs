@@ -320,6 +320,33 @@ namespace NameServer
 					OnFileDoesNotExist(command.Id);
 			}
 
+			public void Visit(FileCopyCommand command)
+			{
+				Visit((ICommand) command);
+
+				if (_root.TryFindParent(command.FileId, out var parent) &&
+				    parent is Directory parentDirectory &&
+				    _root.TryFindNode(command.FileId, out var node) &&
+				    node is File file)
+				{
+					var existingFile = parentDirectory.Children.FirstOrDefault(c => c.Name == command.CopyName);
+
+					if (existingFile != null)
+					{
+						OnNodeAlreadyExists(command.CopyName, parentDirectory.Id);
+					}
+					else
+					{
+						var copy = Factory.CreateFile(command.CopyName, file.Size);
+						parentDirectory.Children.Add(copy);
+					}
+				}
+				else
+				{
+					Message = $"Node with {command.FileId} either does not exist or has no parent.";
+				}
+			}
+
 			private void OnFileDoesNotExist(int fileId)
 			{
 				Message = $"File with ID {fileId} does not exist.";

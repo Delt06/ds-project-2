@@ -7,11 +7,13 @@ namespace Commands
 	{
 		public int Id { get; set; }
 
-		public FileInfoCommand(int id) => this.Id = id;
-		
+		public FileInfoCommand(int id) => Id = id;
+
 		public void Accept(ICommandVisitor visitor)
 		{
 			visitor.Visit(this);
 		}
+
+		public override string ToString() => $"FileInfo ID={Id}";
 	}
 }

@@ -107,7 +107,7 @@ namespace Client
 						command = new DownloadFileCommand(id);
 						break;
 					}
-					
+
 					case "FileInfo":
 					{
 						Console.Write("Enter file ID: ");
@@ -116,7 +116,20 @@ namespace Client
 
 						command = new FileInfoCommand(id);
 						break;
-					}	
+					}
+
+					case "FileCopy":
+					{
+						Console.Write("Enter file ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var id))
+							goto default;
+
+						Console.Write("Enter copy name: ");
+						var copyName = Console.ReadLine() ?? string.Empty;
+
+						command = new FileCopyCommand(id, copyName);
+						break;
+					}
 
 					default:
 						Console.WriteLine("Invalid input.");
