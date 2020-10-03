@@ -19,6 +19,6 @@ namespace Commands
 			visitor.Visit(this);
 		}
 
-		public override string ToString() => $"Ack Message={{{Message}}} {{{Request}}}";
+		public override string ToString() => $"Response Message={{{Message}}} {{{Request}}}";
 	}
 }

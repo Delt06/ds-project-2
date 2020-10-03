@@ -5,9 +5,8 @@ namespace Networking
 {
 	public static class SocketExt
 	{
-		public static ReadOnlySpan<byte> ReceiveUntilEof(this Socket socket, int bufferSize = 1024)
+		public static ReadOnlySpan<byte> ReceiveUntilEof(this Socket socket, byte[] buffer)
 		{
-			var buffer = new byte[bufferSize];
 			var totalSize = 0;
 
 			while (true)

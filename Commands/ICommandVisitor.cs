@@ -8,5 +8,6 @@
 		void Visit(DeleteCommand command);
 		void Visit(MakeDirectoryCommand command);
 		void Visit(UploadFileCommand command);
+		void Visit(InitializeCommand command);
 	}
 }

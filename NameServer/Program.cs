@@ -14,6 +14,9 @@ namespace NameServer
 {
 	internal static class Program
 	{
+		private static readonly TreeFactory Factory = new TreeFactory();
+		private static INode _root = Factory.CreateDirectory("root");
+		
 		private static void Main(string[] args)
 		{
 			var queues = StartFileServerThreads();
@@ -24,17 +27,22 @@ namespace NameServer
 			socket.Bind(endpoint);
 			socket.Listen(1);
 			
-			var factory = new TreeFactory();
-			var root = factory.CreateDirectory("root");
+			Initialize();
 
 			while (true)
 			{
 				using var client = socket.Accept();
 				
 				Console.WriteLine("A client has connected.");
-				HandleClient(client, root, factory, queues);
+				HandleClient(client, queues);
 				Console.WriteLine("A client has disconnected.");
 			}
+		}
+
+		private static void Initialize()
+		{
+			Factory.Reset();
+			_root = Factory.CreateDirectory("root");
 		}
 
 		private static ImmutableArray<ConcurrentQueue<ICommand>> StartFileServerThreads()
@@ -54,6 +62,8 @@ namespace NameServer
 
 				threads[i] = new Thread(arg =>
 				{
+					var buffer = new byte[32000];
+					
 					while (true)
 					{
 						try
@@ -75,7 +85,8 @@ namespace NameServer
 
 								socket.SendCompletely(command.ToBytes());
 								socket.SendCompletely(Conventions.Eof);
-								Console.WriteLine($"Synchronized with file server {serverIndex + 1}.");
+								var response = socket.ReceiveUntilEof(buffer).To<ICommand>();
+								Console.WriteLine($"Synchronized with file server {serverIndex + 1}: {response}");
 							}
 						}
 						catch (Exception e)
@@ -96,19 +107,19 @@ namespace NameServer
 			return queues;
 		}
 
-		private static void HandleClient(Socket client, INode root, TreeFactory treeFactory,
-			ImmutableArray<ConcurrentQueue<ICommand>> queues)
+		private static void HandleClient(Socket client, ImmutableArray<ConcurrentQueue<ICommand>> queues)
 		{
-			var visitor = new ExecuteCommandVisitor(root, treeFactory);
+			var visitor = new ExecuteCommandVisitor();
+			var buffer = new byte[32000];
 			
 			while (!visitor.Exit)
 			{
-				var data = client.ReceiveUntilEof();
+				var data = client.ReceiveUntilEof(buffer);
 				var receivedCommand = data.To<ICommand>();
 
 				Console.WriteLine(receivedCommand);
 				receivedCommand.Accept(visitor);
-				var treeClone = root.Clone();
+				var treeClone = _root.Clone();
 				var statefulCommand = new StatefulCommand(treeClone, receivedCommand);
 
 				foreach (var queue in queues)
@@ -124,15 +135,6 @@ namespace NameServer
 
 		private class ExecuteCommandVisitor : ICommandVisitor
 		{
-			private readonly INode _root;
-			private readonly TreeFactory _factory;
-
-			public ExecuteCommandVisitor(INode root, TreeFactory factory)
-			{
-				_root = root;
-				_factory = factory;
-			}
-
 			public bool Exit { get; private set; }
 			public string? Message { get; private set; }
 			
@@ -158,7 +160,7 @@ namespace NameServer
 					var existingFile = directory.Children.FirstOrDefault(c => c.Name == command.Name);
 					if (existingFile == null)
 					{
-						var file = _factory.CreateFile(command.Name);
+						var file = Factory.CreateFile(command.Name);
 						directory.Children.Add(file);
 						Message = $"ID={file.Id}";
 					}
@@ -215,7 +217,7 @@ namespace NameServer
 					var existingDirectory = parentDirectory.Children.FirstOrDefault(c => c.Name == command.Name);
 					if (existingDirectory == null)
 					{
-						var directory = _factory.CreateDirectory(command.Name);
+						var directory = Factory.CreateDirectory(command.Name);
 						parentDirectory.Children.Add(directory);
 						Message = $"ID={directory.Id}";
 					}
@@ -240,7 +242,7 @@ namespace NameServer
 					var existingFile = parentDirectory.Children.FirstOrDefault(c => c.Name == command.Name);
 					if (existingFile == null)
 					{
-						var file = _factory.CreateFile(command.Name);
+						var file = Factory.CreateFile(command.Name);
 						parentDirectory.Children.Add(file);
 						Message = $"ID={file.Id}";
 					}
@@ -253,6 +255,12 @@ namespace NameServer
 				{
 					OnDirectoryDoesNotExist(command.DirectoryId);
 				}
+			}
+
+			public void Visit(InitializeCommand command)
+			{
+				Visit((ICommand) command);
+				Initialize();
 			}
 		}
 	}

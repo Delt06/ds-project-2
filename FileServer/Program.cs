@@ -26,9 +26,11 @@ namespace FileServer
 			using var client = socket.Accept();
 			var prefix = $"fs{port}_";
 
+			var buffer = new byte[32000];
+
 			while (true)
 			{
-				var command = client.ReceiveUntilEof(8192).To<ICommand>();
+				var command = client.ReceiveUntilEof(buffer).To<ICommand>();
 				Console.WriteLine($"Received {command}.");
 
 				if (command is StatefulCommand statefulCommand)
@@ -39,6 +41,12 @@ namespace FileServer
 				var visitor = new CommandHandleVisitor(_lastTree, prefix);
 				command.Accept(visitor);
 				Console.WriteLine($"Handled {command}.");
+				
+				var response = new ResponseCommand(command);
+				client.SendCompletely(response.ToBytes());
+				client.SendCompletely(Conventions.Eof);
+				
+				Console.WriteLine("Sent response.");
 			}
 		}
 
@@ -85,7 +93,7 @@ namespace FileServer
 				if (File.Exists(path))
 					File.Delete(path);
 				else if (Directory.Exists(path))
-					Directory.Delete(path);
+					Directory.Delete(path, true);
 			}
 
 			public void Visit(MakeDirectoryCommand command)
@@ -99,6 +107,14 @@ namespace FileServer
 			public void Visit(UploadFileCommand command)
 			{
 				throw new NotImplementedException();
+			}
+
+			public void Visit(InitializeCommand command)
+			{
+				if (!TryGetPathTo(_root.Id, out var path)) return;
+				
+				if (Directory.Exists(path))
+					Directory.Delete(path, true);
 			}
 
 			private bool TryGetPathTo(int nodeId, out string path)

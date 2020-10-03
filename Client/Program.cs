@@ -84,6 +84,10 @@ namespace Client
 						break;
 					}
 
+					case "Initialize":
+						command = new InitializeCommand();
+						break;
+
 					default:
 						Console.WriteLine("Invalid input.");
 						continue;

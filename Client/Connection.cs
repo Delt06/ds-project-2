@@ -10,6 +10,7 @@ namespace Client
 	public class Connection : IDisposable
 	{
 		private readonly Socket _socket;
+		private readonly byte[] _buffer = new byte[32000];
 
 		public Connection(EndPoint local, EndPoint remote)
 		{
@@ -26,7 +27,7 @@ namespace Client
 
 		public ICommand Receive()
 		{
-			return _socket.ReceiveUntilEof().To<ICommand>();
+			return _socket.ReceiveUntilEof(_buffer).To<ICommand>();
 		}
 		
 		public void Dispose()
