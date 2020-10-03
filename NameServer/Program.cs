@@ -110,39 +110,46 @@ namespace NameServer
 
 		private static void HandleClient(Socket client, ImmutableArray<ConcurrentQueue<ICommand>> queues)
 		{
-			var visitor = new ExecuteCommandVisitor();
-			var buffer = new byte[32000];
-
-			while (!visitor.Exit)
+			try
 			{
-				var data = client.ReceiveUntilEof(buffer);
-				var receivedCommand = data.To<ICommand>();
+				var visitor = new ExecuteCommandVisitor();
+				var buffer = new byte[32000];
 
-				Console.WriteLine(receivedCommand);
-				receivedCommand.Accept(visitor);
-				var treeClone = _root.Clone();
-				var statefulCommand = new StatefulCommand(treeClone, receivedCommand);
-
-				foreach (var queue in queues)
+				while (!visitor.Exit)
 				{
-					queue.Enqueue(statefulCommand);
-				}
+					var data = client.ReceiveUntilEof(buffer);
+					var receivedCommand = data.To<ICommand>();
 
-				if (visitor.AwaitResponse)
-				{
-					ICommand response;
+					Console.WriteLine(receivedCommand);
+					receivedCommand.Accept(visitor);
+					var treeClone = _root.Clone();
+					var statefulCommand = new StatefulCommand(treeClone, receivedCommand);
 
-					while (!Responses.TryDequeue(out response!) ||
-					       !(response is PayloadResponseCommand payloadResponse) ||
-					       !payloadResponse.Root.Equals(_root)) { }
+					foreach (var queue in queues)
+					{
+						queue.Enqueue(statefulCommand);
+					}
 
-					client.SendCompletelyWithEof(response.ToBytes());
+					if (visitor.AwaitResponse)
+					{
+						ICommand response;
+
+						while (!Responses.TryDequeue(out response!) ||
+						       !(response is PayloadResponseCommand payloadResponse) ||
+						       !payloadResponse.Root.Equals(_root)) { }
+
+						client.SendCompletelyWithEof(response.ToBytes());
+					}
+					else
+					{
+						var response = new ResponseCommand(receivedCommand, visitor.Message);
+						client.SendCompletelyWithEof(response.ToBytes());
+					}
 				}
-				else
-				{
-					var response = new ResponseCommand(receivedCommand, visitor.Message);
-					client.SendCompletelyWithEof(response.ToBytes());
-				}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
 			}
 		}
 
@@ -175,7 +182,7 @@ namespace NameServer
 					var existingFile = directory.Children.FirstOrDefault(c => c.Name == command.Name);
 					if (existingFile == null)
 					{
-						var file = Factory.CreateFile(command.Name);
+						var file = Factory.CreateFile(command.Name, 0);
 						directory.Children.Add(file);
 						Message = $"ID={file.Id}";
 					}
@@ -253,7 +260,7 @@ namespace NameServer
 					var existingFile = parentDirectory.Children.FirstOrDefault(c => c.Name == command.Name);
 					if (existingFile == null)
 					{
-						var file = Factory.CreateFile(command.Name);
+						var file = Factory.CreateFile(command.Name, command.Data.Length);
 						parentDirectory.Children.Add(file);
 						Message = $"ID={file.Id}";
 					}
@@ -298,6 +305,17 @@ namespace NameServer
 				if (_root.TryFindNode(command.Id, out var node) &&
 				    node is File)
 					AwaitResponse = true;
+				else
+					OnFileDoesNotExist(command.Id);
+			}
+
+			public void Visit(FileInfoCommand command)
+			{
+				Visit((ICommand) command);
+
+				if (_root.TryFindNode(command.Id, out var node) &&
+				    node is File file)
+					Message = $"ID={file.Id} Size={file.Size}";
 				else
 					OnFileDoesNotExist(command.Id);
 			}

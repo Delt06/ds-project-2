@@ -107,6 +107,16 @@ namespace Client
 						command = new DownloadFileCommand(id);
 						break;
 					}
+					
+					case "FileInfo":
+					{
+						Console.Write("Enter file ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var id))
+							goto default;
+
+						command = new FileInfoCommand(id);
+						break;
+					}	
 
 					default:
 						Console.WriteLine("Invalid input.");

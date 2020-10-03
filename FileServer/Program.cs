@@ -141,6 +141,11 @@ namespace FileServer
 				PayloadPath = normalPath;
 			}
 
+			public void Visit(FileInfoCommand command)
+			{
+				
+			}
+
 			private bool TryPrefixedGetPathTo(int nodeId, out string path) =>
 				TryPrefixedGetPathTo(nodeId, out path, out _);
 
