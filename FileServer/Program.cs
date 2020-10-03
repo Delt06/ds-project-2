@@ -28,7 +28,7 @@ namespace FileServer
 
 			while (true)
 			{
-				var command = client.ReceiveUntilEof().To<ICommand>();
+				var command = client.ReceiveUntilEof(8192).To<ICommand>();
 				Console.WriteLine($"Received {command}.");
 
 				if (command is StatefulCommand statefulCommand)
