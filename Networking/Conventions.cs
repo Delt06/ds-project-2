@@ -12,8 +12,24 @@ namespace Networking
 
 		public static bool ContainsEof(byte[] buffer, int length)
 		{
-			var data = Encoding.ASCII.GetString(buffer, 0, length);
-			return data.IndexOf(EofText, StringComparison.Ordinal) > -1;
+			for (var start = 0; start < length - EofBytes.Length + 1; start++)
+			{
+				var correct = true; 
+				
+				for (var index = 0; index < EofBytes.Length; index++)
+				{
+					var totalIndex = start + index;
+					if (buffer[totalIndex] == EofBytes[index]) continue;
+					
+					correct = false;
+					break;
+				}
+
+				if (correct)
+					return true;
+			}
+
+			return false;
 		}
 	}
 }

@@ -18,5 +18,7 @@ namespace Commands
 		{
 			visitor.Visit(this);
 		}
+
+		public override string ToString() => $"MakeDirectory ParentId={ParentDirectoryId} Name={Name}";
 	}
 }

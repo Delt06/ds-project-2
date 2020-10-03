@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Files
 {
+	[Serializable]
 	public sealed class Directory : INode
 	{
 		public int Id { get; }
@@ -14,7 +16,21 @@ namespace Files
 		}
 
 		IEnumerable<INode> INode.Children => Children;
-		
-		public readonly ISet<INode> Children = new HashSet<INode>();
+
+		public INode Clone()
+		{
+			var clone = new Directory(Id, Name);
+
+			foreach (var child in Children)
+			{
+				var childClone = child.Clone();
+				clone.Children.Add(childClone);
+			}
+
+			return clone;
+		}
+
+		public readonly List<INode> Children = new List<INode>();
+		object ICloneable.Clone() => Clone();
 	}
 }

@@ -7,5 +7,6 @@
 		void Visit(CreateFileCommand command);
 		void Visit(DeleteCommand command);
 		void Visit(MakeDirectoryCommand command);
+		void Visit(UploadFileCommand command);
 	}
 }

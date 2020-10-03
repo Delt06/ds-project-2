@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net;
 using Commands;
 using Networking;
@@ -18,7 +19,7 @@ namespace Client
 			{
 				Console.Write("Enter command: ");
 
-				var input = Console.ReadLine();
+				var input = Console.ReadLine()?.Trim() ?? string.Empty;
 				ICommand command;
 				
 				switch (input)
@@ -60,6 +61,26 @@ namespace Client
 						var directoryName = Console.ReadLine() ?? string.Empty;
 						
 						command = new MakeDirectoryCommand(id, directoryName);
+						break;
+					}
+
+					case "UploadFile":
+					{
+						Console.Write("Enter directory ID: ");
+						if (!int.TryParse(Console.ReadLine(), out var id))
+							goto default;
+						
+						Console.Write("Enter file path: ");
+						var path = Console.ReadLine() ?? string.Empty;
+						if (!File.Exists(path))
+						{
+							Console.WriteLine($"File at {path} does not exist.");
+							goto default;
+						}
+
+						var data = File.ReadAllBytes(path);
+						var fileName = Path.GetFileName(path);
+						command = new UploadFileCommand(id, fileName, data);
 						break;
 					}
 

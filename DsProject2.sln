@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Commands", "Commands\Comman
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Files", "Files\Files.csproj", "{503CC379-2EA0-4475-B9F4-DA1FA1B1051F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileServer", "FileServer\FileServer.csproj", "{5708A6A5-7E1C-4B24-8B9D-D9E4088AE9CF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{503CC379-2EA0-4475-B9F4-DA1FA1B1051F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{503CC379-2EA0-4475-B9F4-DA1FA1B1051F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{503CC379-2EA0-4475-B9F4-DA1FA1B1051F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5708A6A5-7E1C-4B24-8B9D-D9E4088AE9CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5708A6A5-7E1C-4B24-8B9D-D9E4088AE9CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5708A6A5-7E1C-4B24-8B9D-D9E4088AE9CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5708A6A5-7E1C-4B24-8B9D-D9E4088AE9CF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

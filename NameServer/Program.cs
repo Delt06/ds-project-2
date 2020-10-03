@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using Commands;
 using Commands.Serialization;
 using Files;
@@ -12,6 +16,8 @@ namespace NameServer
 	{
 		private static void Main(string[] args)
 		{
+			var queues = StartFileServerThreads();
+
 			using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 			var address = IpAddressUtils.GetLocal();
 			var endpoint = new IPEndPoint(address, 55556);
@@ -26,12 +32,72 @@ namespace NameServer
 				using var client = socket.Accept();
 				
 				Console.WriteLine("A client has connected.");
-				HandleClient(client, root, factory);
+				HandleClient(client, root, factory, queues);
 				Console.WriteLine("A client has disconnected.");
 			}
 		}
 
-		private static void HandleClient(Socket client, INode root, TreeFactory treeFactory)
+		private static ImmutableArray<ConcurrentQueue<ICommand>> StartFileServerThreads()
+		{
+			Console.Write("Input the number of file servers: ");
+			var fileServersCount = int.Parse(Console.ReadLine() ?? string.Empty);
+			var queues = Enumerable.Range(0, fileServersCount)
+				.Select(i => new ConcurrentQueue<ICommand>())
+				.ToImmutableArray();
+			var threads = new Thread[fileServersCount];
+
+			for (var i = 0; i < fileServersCount; i++)
+			{
+				Console.Write($"Input the port of the file server {i + 1}: ");
+				var serverIndex = i;
+				var port = int.Parse(Console.ReadLine() ?? string.Empty);
+
+				threads[i] = new Thread(arg =>
+				{
+					while (true)
+					{
+						try
+						{
+							var address = IpAddressUtils.GetLocal();
+							var local = new IPEndPoint(address, 55557 + serverIndex);
+							var remote = new IPEndPoint(address, port);
+							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+							socket.Bind(local);
+							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
+							socket.Connect(remote);
+							Console.WriteLine($"Connected to file server {serverIndex + 1}.");
+					
+							var commands = queues[serverIndex];
+
+							while (true)
+							{
+								if (!commands.TryDequeue(out var command)) continue;
+
+								socket.SendCompletely(command.ToBytes());
+								socket.SendCompletely(Conventions.Eof);
+								Console.WriteLine($"Synchronized with file server {serverIndex + 1}.");
+							}
+						}
+						catch (Exception e)
+						{
+							Console.WriteLine($"Disconnected from file server {serverIndex + 1}.");
+							Console.WriteLine(e);
+							Thread.Sleep(500);
+						}
+					}
+				});
+			}
+
+			foreach (var thread in threads)
+			{
+				thread.Start();
+			}
+
+			return queues;
+		}
+
+		private static void HandleClient(Socket client, INode root, TreeFactory treeFactory,
+			ImmutableArray<ConcurrentQueue<ICommand>> queues)
 		{
 			var visitor = new ExecuteCommandVisitor(root, treeFactory);
 			
@@ -39,9 +105,16 @@ namespace NameServer
 			{
 				var data = client.ReceiveUntilEof();
 				var receivedCommand = data.To<ICommand>();
-				
+
 				Console.WriteLine(receivedCommand);
 				receivedCommand.Accept(visitor);
+				var treeClone = root.Clone();
+				var statefulCommand = new StatefulCommand(treeClone, receivedCommand);
+
+				foreach (var queue in queues)
+				{
+					queue.Enqueue(statefulCommand);
+				}
 
 				var response = new ResponseCommand(receivedCommand, visitor.Message);
 				client.SendCompletely(response.ToBytes());
@@ -82,19 +155,43 @@ namespace NameServer
 				if (_root.TryFindNode(command.DirectoryId, out var node) &&
 				    node is Directory directory)
 				{
-					var file = _factory.CreateFile(command.Name);
-					directory.Children.Add(file);
-					Message = $"ID={file.Id}";
+					var existingFile = directory.Children.FirstOrDefault(c => c.Name == command.Name);
+					if (existingFile == null)
+					{
+						var file = _factory.CreateFile(command.Name);
+						directory.Children.Add(file);
+						Message = $"ID={file.Id}";
+					}
+					else
+					{
+						OnNodeAlreadyExists(command.Name, command.DirectoryId);
+					}
 				}
 				else
 				{
-					Message = $"Directory with ID {command.DirectoryId} does not exist.";
+					OnDirectoryDoesNotExist(command.DirectoryId);
 				}
+			}
+
+			private void OnNodeAlreadyExists(string name, int directoryId)
+			{
+				Message = $"Node {name} already exists in the directory {directoryId}.";
+			}
+
+			private void OnDirectoryDoesNotExist(int directoryId)
+			{
+				Message = $"Directory with ID {directoryId} does not exist.";
 			}
 
 			public void Visit(DeleteCommand command)
 			{
 				Visit((ICommand) command);
+
+				if (command.NodeId == 0)
+				{
+					Message = "Root cannot be deleted.";
+					return;
+				}
 
 				if (_root.TryFindNode(command.NodeId, out var node) &&
 					_root.TryFindParent(command.NodeId, out var parent) &&
@@ -115,13 +212,46 @@ namespace NameServer
 				if (_root.TryFindNode(command.ParentDirectoryId, out var parent) &&
 				    parent is Directory parentDirectory)
 				{
-					var directory = _factory.CreateDirectory(command.Name);
-					parentDirectory.Children.Add(directory);
-					Message = $"ID={directory.Id}";
+					var existingDirectory = parentDirectory.Children.FirstOrDefault(c => c.Name == command.Name);
+					if (existingDirectory == null)
+					{
+						var directory = _factory.CreateDirectory(command.Name);
+						parentDirectory.Children.Add(directory);
+						Message = $"ID={directory.Id}";
+					}
+					else
+					{
+						OnNodeAlreadyExists(command.Name, command.ParentDirectoryId);
+					}
 				}
 				else
 				{
-					Message = $"Directory with ID {command.ParentDirectoryId} does not exist.";
+					OnDirectoryDoesNotExist(command.ParentDirectoryId);
+				}
+			}
+
+			public void Visit(UploadFileCommand command)
+			{
+				Visit((ICommand) command);
+
+				if (_root.TryFindNode(command.DirectoryId, out var parent) &&
+				    parent is Directory parentDirectory)
+				{
+					var existingFile = parentDirectory.Children.FirstOrDefault(c => c.Name == command.Name);
+					if (existingFile == null)
+					{
+						var file = _factory.CreateFile(command.Name);
+						parentDirectory.Children.Add(file);
+						Message = $"ID={file.Id}";
+					}
+					else
+					{
+						OnNodeAlreadyExists(command.Name, command.DirectoryId);
+					}
+				}
+				else
+				{
+					OnDirectoryDoesNotExist(command.DirectoryId);
 				}
 			}
 		}
