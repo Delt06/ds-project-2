@@ -5,6 +5,8 @@ namespace Networking
 {
 	public static class Conventions
 	{
+		public const int NameServerPort = 55556;
+		
 		private const string EofText = "<EOF>";
 		private static readonly byte[] EofBytes = Encoding.ASCII.GetBytes(EofText);
 
