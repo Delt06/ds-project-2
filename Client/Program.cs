@@ -8,11 +8,16 @@ namespace Client
 {
 	internal class Program
 	{
+		public const int Port = 55555;
+		
 		private static void Main(string[] args)
 		{
+			Console.Write("Input the IP address of the name server: ");
+			var remoteAddress = IPAddress.Parse(Console.ReadLine() ?? string.Empty);
+			
 			var address = IpAddressUtils.GetLocal();
-			var local = new IPEndPoint(address, 55555);
-			var remote = new IPEndPoint(address, 55556);
+			var local = new IPEndPoint(address, Port);
+			var remote = new IPEndPoint(remoteAddress, Conventions.NameServerPort);
 			using var connection = new Connection(local, remote);
 
 			while (true)

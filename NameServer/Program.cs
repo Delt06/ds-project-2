@@ -17,14 +17,17 @@ namespace NameServer
 		private static readonly ConcurrentQueue<ICommand> Responses = new ConcurrentQueue<ICommand>();
 		private static readonly TreeFactory Factory = new TreeFactory();
 		private static INode _root = Factory.CreateDirectory("root");
+		private const int Port = Conventions.NameServerPort;
 
 		private static void Main(string[] args)
 		{
+			var address = IpAddressUtils.GetLocal();
+			Console.WriteLine($"Launching on {address}:{Port}...");
+			
 			var queues = StartFileServerThreads();
 
 			using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-			var address = IpAddressUtils.GetLocal();
-			var endpoint = new IPEndPoint(address, 55556);
+			var endpoint = new IPEndPoint(address, Port);
 			socket.Bind(endpoint);
 			socket.Listen(1);
 
@@ -57,9 +60,9 @@ namespace NameServer
 
 			for (var i = 0; i < fileServersCount; i++)
 			{
-				Console.Write($"Input the port of the file server {i + 1}: ");
+				Console.Write($"Input the address of the file server {i + 1}: ");
 				var serverIndex = i;
-				var port = int.Parse(Console.ReadLine() ?? string.Empty);
+				var remote = IPEndPoint.Parse(Console.ReadLine() ?? string.Empty);
 
 				threads[i] = new Thread(arg =>
 				{
@@ -69,9 +72,8 @@ namespace NameServer
 					{
 						try
 						{
-							var address = IpAddressUtils.GetLocal();
-							var local = new IPEndPoint(address, 55557 + serverIndex);
-							var remote = new IPEndPoint(address, port);
+							var localAddress = IpAddressUtils.GetLocal();
+							var local = new IPEndPoint(localAddress, 55557 + serverIndex);
 							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 							socket.Bind(local);
 							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
