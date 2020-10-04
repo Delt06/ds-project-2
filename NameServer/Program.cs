@@ -355,6 +355,7 @@ namespace NameServer
 					{
 						var copy = Factory.CreateFile(command.CopyName, file.Size);
 						parentDirectory.Children.Add(copy);
+						Message = $"ID={copy.Id}";
 					}
 				}
 				else
