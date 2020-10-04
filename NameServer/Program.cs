@@ -24,7 +24,7 @@ namespace NameServer
 			var address = IpAddressUtils.GetLocal();
 			Console.WriteLine($"Launching on {address}:{Port}...");
 			
-			var queues = StartFileServerThreads();
+			var queues = StartFileServerThreads(args);
 
 			using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 			var endpoint = new IPEndPoint(address, Port);
@@ -49,10 +49,10 @@ namespace NameServer
 			_root = Factory.CreateDirectory("root");
 		}
 
-		private static ImmutableArray<ConcurrentQueue<ICommand>> StartFileServerThreads()
+		private static ImmutableArray<ConcurrentQueue<ICommand>> StartFileServerThreads(string[] args)
 		{
-			Console.Write("Input the number of file servers: ");
-			var fileServersCount = int.Parse(Console.ReadLine() ?? string.Empty);
+			var fileServersCount = args.Length;
+			Console.WriteLine($"Configuring {fileServersCount} file servers...");
 			var queues = Enumerable.Range(0, fileServersCount)
 				.Select(i => new ConcurrentQueue<ICommand>())
 				.ToImmutableArray();
@@ -60,9 +60,8 @@ namespace NameServer
 
 			for (var i = 0; i < fileServersCount; i++)
 			{
-				Console.Write($"Input the address of the file server {i + 1}: ");
 				var serverIndex = i;
-				var remote = IPEndPoint.Parse(Console.ReadLine() ?? string.Empty);
+				var remote = IPEndPoint.Parse(args[i]);
 
 				threads[i] = new Thread(arg =>
 				{
@@ -73,7 +72,7 @@ namespace NameServer
 						try
 						{
 							var localAddress = IpAddressUtils.GetLocal();
-							var local = new IPEndPoint(localAddress, 55557 + serverIndex);
+							var local = new IPEndPoint(localAddress, Port + 1 + serverIndex);
 							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
 							socket.Bind(local);
 							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
