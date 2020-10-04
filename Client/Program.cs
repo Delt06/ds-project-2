@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net;
+using Client.Commands;
 using Commands;
 using Networking;
 
@@ -9,6 +10,24 @@ namespace Client
 	internal class Program
 	{
 		public const int Port = 55555;
+
+		private static readonly AvailableCommand[] AvailableCommands =
+		{
+			new AvailableInitializeCommand(),
+			
+			new AvailableCreateFileCommand(),
+			new AvailableUploadFileCommand(),
+			new AvailableDownloadFileCommand(),
+			new AvailableDeleteCommand(),
+			
+			new AvailableFileInfoCommand(),
+			new AvailableFileCopyCommand(),
+			new AvailableFileMoveCommand(),
+			
+			new AvailableMakeDirectoryCommand(),
+			new AvailableReadDirectoryCommand(), 
+			new AvailableExitCommand(),
+		};
 		
 		private static void Main(string[] args)
 		{
@@ -24,156 +43,54 @@ namespace Client
 			while (true)
 			{
 				Console.Write("Enter command: ");
-
-				var input = Console.ReadLine()?.Trim() ?? string.Empty;
-				ICommand command;
-
-				switch (input)
+				var commandName = Console.ReadLine()?.Trim() ?? string.Empty;
+				
+				if (TryHandle(commandName, out var command))
 				{
-					case "Exit":
-						command = new ExitCommand();
-						break;
+					connection.Send(command);
+					var response = connection.Receive();
+					Console.WriteLine(response);
 
-					case "CreateFile":
+					if (response is PayloadResponseCommand payloadResponse)
 					{
-						Console.Write("Enter directory ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
+						Console.WriteLine(payloadResponse.PayloadPath);
 
-						Console.Write("Enter file name: ");
-						var fileName = Console.ReadLine() ?? string.Empty;
-						command = new CreateFileCommand(id, fileName);
-						break;
+						var directory = Path.GetDirectoryName(payloadResponse.PayloadPath);
+						if (!string.IsNullOrWhiteSpace(directory))
+							Directory.CreateDirectory(directory);
+
+						File.WriteAllBytes(payloadResponse.PayloadPath, payloadResponse.Payload);
 					}
 
-
-					case "Delete":
-					{
-						Console.Write("Enter node ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						command = new DeleteCommand(id);
-						break;
-					}
-
-					case "MakeDirectory":
-					{
-						Console.Write("Enter parent directory ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						Console.Write("Enter directory name: ");
-						var directoryName = Console.ReadLine() ?? string.Empty;
-
-						command = new MakeDirectoryCommand(id, directoryName);
-						break;
-					}
-
-					case "UploadFile":
-					{
-						Console.Write("Enter directory ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						Console.Write("Enter file path: ");
-						var path = Console.ReadLine() ?? string.Empty;
-						if (!File.Exists(path))
-						{
-							Console.WriteLine($"File at {path} does not exist.");
-							goto default;
-						}
-
-						var data = File.ReadAllBytes(path);
-						var fileName = Path.GetFileName(path);
-						command = new UploadFileCommand(id, fileName, data);
-						break;
-					}
-
-					case "Initialize":
-						command = new InitializeCommand();
-						break;
-
-					case "ReadDirectory":
-					{
-						Console.Write("Enter directory ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						command = new ReadDirectoryCommand(id);
-						break;
-					}
-
-					case "DownloadFile":
-					{
-						Console.Write("Enter file ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						command = new DownloadFileCommand(id);
-						break;
-					}
-
-					case "FileInfo":
-					{
-						Console.Write("Enter file ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						command = new FileInfoCommand(id);
-						break;
-					}
-
-					case "FileCopy":
-					{
-						Console.Write("Enter file ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var id))
-							goto default;
-
-						Console.Write("Enter copy name: ");
-						var copyName = Console.ReadLine() ?? string.Empty;
-
-						command = new FileCopyCommand(id, copyName);
-						break;
-					}
-
-					case "FileMove":
-					{
-						Console.Write("Enter file ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var fileId))
-							goto default;
-
-						Console.Write("Enter destination directory ID: ");
-						if (!int.TryParse(Console.ReadLine(), out var destinationDirectoryId))
-							goto default;
-
-						command = new FileMoveCommand(fileId, destinationDirectoryId);
-						break;
-					}
-
-					default:
-						Console.WriteLine("Invalid input.");
-						continue;
+					if (command is ExitCommand)
+						return;
 				}
-
-				connection.Send(command);
-				var response = connection.Receive();
-				Console.WriteLine(response);
-
-				if (response is PayloadResponseCommand payloadResponse)
+				else
 				{
-					Console.WriteLine(payloadResponse.PayloadPath);
-
-					var directory = Path.GetDirectoryName(payloadResponse.PayloadPath);
-					if (!string.IsNullOrWhiteSpace(directory))
-						Directory.CreateDirectory(directory);
-
-					File.WriteAllBytes(payloadResponse.PayloadPath, payloadResponse.Payload);
+					Console.WriteLine("Invalid input.");
 				}
-
-				if (command is ExitCommand)
-					return;
 			}
+		}
+
+		private static bool TryHandle(string name, out ICommand command)
+		{
+			command = default!;
+			return TryResolveAvailableCommand(name, out var availableCommand) &&
+			       availableCommand.TryHandle(out command);
+		}
+
+		private static bool TryResolveAvailableCommand(string name, out AvailableCommand resolvedAvailableCommand)
+		{
+			foreach (var availableCommand in AvailableCommands)
+			{
+				if (!name.Equals(availableCommand.Name)) continue;
+				
+				resolvedAvailableCommand = availableCommand;
+				return true;
+			}
+
+			resolvedAvailableCommand = default!;
+			return false;
 		}
 	}
 }
