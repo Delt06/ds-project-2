@@ -73,7 +73,10 @@ namespace NameServer
 						{
 							var localAddress = IpAddressUtils.GetLocal();
 							var local = new IPEndPoint(localAddress, Port + 1 + serverIndex);
-							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)
+							{
+								SendTimeout = 500, ReceiveTimeout = 500
+							};
 							socket.Bind(local);
 							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
 							socket.Connect(remote);
@@ -83,9 +86,14 @@ namespace NameServer
 
 							while (true)
 							{
-								if (!commands.TryDequeue(out var command)) continue;
+								if (!commands.TryDequeue(out var command))
+								{
+									continue;
+								}
 
+								Console.WriteLine($"Sending command to the file server {serverIndex + 1}...");
 								socket.SendCompletelyWithEof(command.ToBytes());
+								Console.WriteLine($"Waiting for a response from the file server {serverIndex + 1}...");
 								var response = socket.ReceiveUntilEof(buffer).To<ICommand>();
 								Responses.Enqueue(response);
 								Console.WriteLine($"Synchronized with file server {serverIndex + 1}: {response}");
