@@ -30,7 +30,15 @@ sudo docker pull deltation/file-server
 sudo docker run -p 55563:55563 -p 55564:55564 deltation/file-server 55563 55564
 ```
 
-Then, launch the client application and enter the IP of the NameServer host. That's it, the DFS is ready to work.
+Then, launch the client application and enter the IP of the NameServer host:
+```
+sudo docker pull deltation/dfs-client
+sudo docker run -i -p 55555:55555 deltation/dfs-client <NameServerIP>
+``` 
+
+After the client has connected to the NameServer, type `Initialize` to initialize the DFS.
+
+That's it, the DFS is ready to work.
 
 ### Replication
 Application supports replication of FileServer nodes. If one node is down, others will be able to server the requests.

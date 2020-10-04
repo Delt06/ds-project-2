@@ -34,9 +34,14 @@ namespace Client
 			var address = IpAddressUtils.GetLocal();
 			var local = new IPEndPoint(address, Port);
 			Console.WriteLine($"Local address={local}");
-			
-			Console.Write("Input the IP address of the name server: ");
-			var remoteAddress = IPAddress.Parse(Console.ReadLine() ?? string.Empty);
+
+			if (args.Length == 0)
+			{
+				Console.Write("Input the IP address of the name server: ");
+				args = new[] {Console.ReadLine() ?? string.Empty};
+			}
+
+			var remoteAddress = IPAddress.Parse(args[0]);
 			var remote = new IPEndPoint(remoteAddress, Conventions.NameServerPort);
 			using var connection = new Connection(local, remote);
 			
