@@ -1,4 +1,5 @@
 ﻿@startuml
+skinparam backgroundColor #00000000
 
 package "Client" {
     CLI - [Command Handler]
