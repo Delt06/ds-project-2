@@ -11,12 +11,6 @@ Maintains the file/directory tree and works as a mediator between the client and
 Let's assume that we have 2 File Servers and they have the following IP addresses:
 - FileServer1: 10.0.15.11
 - FileServer2: 10.0.15.12
- 
-On NameServer host, run:
-```
-sudo docker pull deltation/name-server
-sudo docker run -p 55556-55560:55556-55560 deltation/name-server 10.0.15.11:55561 10.0.15.12:55563
-```
 
 On FileServer1 host, run:
 ```
@@ -28,6 +22,12 @@ On FileServer2 host, run:
 ```
 sudo docker pull deltation/file-server
 sudo docker run -p 55563:55563 -p 55564:55564 deltation/file-server 55563 55564
+```
+
+On NameServer host, run:
+```
+sudo docker pull deltation/name-server
+sudo docker run -p 55556-55560:55556-55560 deltation/name-server 10.0.15.11:55561 10.0.15.12:55563
 ```
 
 Then, launch the client application and enter the IP of the NameServer host:
