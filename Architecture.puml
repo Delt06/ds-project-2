@@ -1,0 +1,42 @@
+﻿@startuml
+
+package "Client" {
+    CLI - [Command Handler]
+
+    [Command Sender/Receiver]
+    [Command Sender/Receiver] --> [Command Handler] : response
+    [Command Handler] --> [Command Sender/Receiver] : command 
+}
+
+
+
+package "Name Server" {
+    [Command Receiver]
+    [Tree]
+    [File Server Threads]
+    [Response Queue]
+    [Response Sender]
+    
+    [Command Sender/Receiver] --> [Command Receiver]: command, TCP
+    [Response Sender] --> [Command Sender/Receiver]: response, TCP
+    [Command Receiver] <-> [Tree]
+    [Command Receiver] --> [File Server Threads]: command
+    [Response Queue] --> [Response Sender]: response
+}
+
+package "File Server" {
+    [Local Tree Snapshot]
+    [Command Executor]
+    [Local File System]
+    [Load Provider]
+    
+    [Local Tree Snapshot] --> [Load Provider]
+    [Local File System] <-> [Load Provider]
+    [Local File System] <-- [Command Executor]
+    [Command Executor] <-> [Local Tree Snapshot]
+    [Command Executor] <-- [File Server Threads]: command, TCP
+    [Command Executor] --> [Response Queue]: response, TCP
+}
+
+
+@enduml
