@@ -39,6 +39,13 @@ namespace Client
 			var remoteAddress = IPAddress.Parse(Console.ReadLine() ?? string.Empty);
 			var remote = new IPEndPoint(remoteAddress, Conventions.NameServerPort);
 			using var connection = new Connection(local, remote);
+			
+			Console.WriteLine("Available commands: ");
+
+			foreach (var availableCommand in AvailableCommands)
+			{
+				Console.WriteLine(availableCommand.Name);
+			}
 
 			while (true)
 			{
