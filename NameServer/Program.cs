@@ -339,7 +339,7 @@ namespace NameServer
 
 				if (_root.TryFindNode(command.Id, out var node) &&
 				    node is File file)
-					Message = $"ID={file.Id} Size={file.Size}";
+					Message = $"ID={file.Id} Name={file.Name} Size={file.Size}";
 				else
 					OnFileDoesNotExist(command.Id);
 			}
