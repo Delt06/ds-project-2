@@ -1,15 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using Commands;
 using Commands.Serialization;
 using Files;
-using NameServer;
 using Networking;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
@@ -20,6 +15,7 @@ namespace FileServer
 	{
 		private static readonly object Mutex = new object();
 		private static INode? _lastTree;
+		private static Timestamp _timestamp = new Timestamp();
 		private static FilePathBuilder _pathBuilder = new FilePathBuilder(string.Empty);
 
 		private static void Main(string[] args)
@@ -40,7 +36,7 @@ namespace FileServer
 
 			lock (Mutex)
 			{
-				new BackupWorker(Mutex, () => _lastTree, _pathBuilder).LaunchOn(backupPort);	
+				new BackupWorker(Mutex, () => _lastTree, _pathBuilder, () => _timestamp).LaunchOn(backupPort);	
 			}
 
 			var ip = IpAddressUtils.GetLocal();
@@ -61,8 +57,11 @@ namespace FileServer
 
 				lock (Mutex)
 				{
-					if (command is StatefulCommand statefulCommand)
+					var statefulCommand = command as StatefulCommand;
+					if (statefulCommand != null)
+					{
 						_lastTree = statefulCommand.Root;
+					}
 
 					if (_lastTree == null) continue;
 
@@ -73,9 +72,14 @@ namespace FileServer
 					Console.WriteLine($"Handled {command}.");
 
 					ICommand response = visitor.Payload != null
-						? new PayloadResponseCommand(command, visitor.Payload, visitor.PayloadPath, _lastTree)
+						? new PayloadResponseCommand(command, visitor.Payload, visitor.PayloadPath, _lastTree, _timestamp)
 						: new ResponseCommand(command);
 					client.SendCompletelyWithEof(response.ToBytes());
+					
+					if (statefulCommand != null && _timestamp.Value >= statefulCommand.Timestamp.Value - 1)
+					{
+						_timestamp = statefulCommand.Timestamp;
+					}
 				}
 
 				Console.WriteLine("Sent response.");
@@ -134,6 +138,7 @@ namespace FileServer
 			lock (Mutex)
 			{
 				_lastTree = backupData.Tree;
+				_timestamp = backupData.Timestamp ?? new Timestamp();
 				if (_lastTree == null) return;
 
 				if (_pathBuilder.TryGetPrefixedPath(_lastTree, _lastTree.Id, out var rootPath, out _))

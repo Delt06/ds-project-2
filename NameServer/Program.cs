@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -17,7 +18,9 @@ namespace NameServer
 		private static readonly ConcurrentQueue<ICommand> Responses = new ConcurrentQueue<ICommand>();
 		private static readonly TreeFactory Factory = new TreeFactory();
 		private static INode _root = Factory.CreateDirectory("root");
+		private static readonly Timestamp Timestamp = new Timestamp();
 		private const int Port = Conventions.NameServerPort;
+		private const int ResponseQueueTimeout = 5000;
 
 		private static void Main(string[] args)
 		{
@@ -46,6 +49,7 @@ namespace NameServer
 		private static void Initialize()
 		{
 			Factory.Reset();
+			Timestamp.Reset();
 			_root = Factory.CreateDirectory("root");
 		}
 
@@ -121,7 +125,7 @@ namespace NameServer
 		{
 			try
 			{
-				var visitor = new ExecuteCommandVisitor(() => _root, Factory, Initialize);
+				var visitor = new ExecuteCommandVisitor(() => _root, Factory, Initialize, Timestamp);
 				var buffer = new byte[32000];
 
 				while (!visitor.Exit)
@@ -132,7 +136,10 @@ namespace NameServer
 					Console.WriteLine(receivedCommand);
 					receivedCommand.Accept(visitor);
 					var treeClone = _root.Clone();
-					var statefulCommand = new StatefulCommand(treeClone, receivedCommand);
+					var timestampClone = Timestamp.Clone();
+					var statefulCommand = new StatefulCommand(treeClone, receivedCommand, timestampClone);
+					
+					Responses.Clear();
 
 					foreach (var queue in queues)
 					{
@@ -142,11 +149,23 @@ namespace NameServer
 					if (visitor.AwaitResponse)
 					{
 						ICommand response;
+						var watch = Stopwatch.StartNew();
 
 						while (true)
 						{
-							if (!Responses.TryDequeue(out response!)) continue;
-
+							if (!Responses.TryDequeue(out response!))
+							{
+								if (watch.ElapsedMilliseconds >= ResponseQueueTimeout)
+								{
+									response = new ResponseCommand(receivedCommand, "Timeout");
+									break;
+								}
+								continue;
+							}
+							
+							watch.Restart();
+							Console.WriteLine("Received a response...");
+							
 							if (!(response is PayloadResponseCommand payloadResponse))
 							{
 								Console.WriteLine("Response has no payload.");
@@ -156,6 +175,12 @@ namespace NameServer
 							if (!payloadResponse.Root.Equals(_root))
 							{
 								Console.WriteLine("Response tree is different.");
+								continue;
+							}
+
+							if (!payloadResponse.Timestamp.Equals(Timestamp))
+							{
+								Console.WriteLine("Response timestamp is different.");
 								continue;
 							}
 

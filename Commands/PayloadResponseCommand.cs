@@ -9,12 +9,13 @@ namespace Commands
 		public byte[] Payload { get; set; }
 		public string PayloadPath { get; set; }
 		public INode Root { get; set; }
+		public Timestamp Timestamp { get; set; }
 
-		public PayloadResponseCommand(ICommand request, byte[] payload, string payloadPath, INode root,
-			string? message = null) : base(request, message)
+		public PayloadResponseCommand(ICommand request, byte[] payload, string payloadPath, INode root, Timestamp timestamp, string? message = null) : base(request, message)
 		{
 			Payload = payload;
 			Root = root;
+			Timestamp = timestamp;
 			PayloadPath = payloadPath;
 		}
 

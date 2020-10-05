@@ -10,12 +10,14 @@ namespace NameServer
 		private readonly Func<INode> _getRoot;
 		private readonly TreeFactory _factory;
 		private readonly Action _initialize;
+		private readonly Timestamp _timestamp;
 
-		public ExecuteCommandVisitor(Func<INode> getRoot, TreeFactory factory, Action initialize)
+		public ExecuteCommandVisitor(Func<INode> getRoot, TreeFactory factory, Action initialize, Timestamp timestamp)
 		{
 			_getRoot = getRoot;
 			_factory = factory;
 			_initialize = initialize;
+			_timestamp = timestamp;
 		}
 			
 		public bool Exit { get; private set; }
@@ -85,9 +87,14 @@ namespace NameServer
 			if (Root.TryFindNode(command.NodeId, out var node) &&
 			    Root.TryFindParent(command.NodeId, out var parent) &&
 			    parent is Directory parentDirectory)
+			{
 				parentDirectory.Children.Remove(node);
+				_timestamp.Increment();
+			}
 			else
+			{
 				Message = $"Node with {command.NodeId} either does not exist or has no parent.";
+			}
 		}
 
 		public void Visit(MakeDirectoryCommand command)
@@ -102,6 +109,7 @@ namespace NameServer
 				{
 					var directory = _factory.CreateDirectory(command.Name);
 					parentDirectory.Children.Add(directory);
+					_timestamp.Increment();
 					Message = $"ID={directory.Id}";
 				}
 				else
@@ -127,6 +135,7 @@ namespace NameServer
 				{
 					var file = _factory.CreateFile(command.Name, command.Data.Length);
 					parentDirectory.Children.Add(file);
+					_timestamp.Increment();
 					Message = $"ID={file.Id}";
 				}
 				else
@@ -169,9 +178,13 @@ namespace NameServer
 
 			if (Root.TryFindNode(command.Id, out var node) &&
 			    node is File)
+			{
 				AwaitResponse = true;
+			}
 			else
+			{
 				OnFileDoesNotExist(command.Id);
+			}
 		}
 
 		public void Visit(FileInfoCommand command)
@@ -180,9 +193,13 @@ namespace NameServer
 
 			if (Root.TryFindNode(command.Id, out var node) &&
 			    node is File file)
+			{
 				Message = $"ID={file.Id} Name={file.Name} Size={file.Size}";
+			}
 			else
+			{
 				OnFileDoesNotExist(command.Id);
+			}
 		}
 
 		public void Visit(FileCopyCommand command)
@@ -205,6 +222,7 @@ namespace NameServer
 					{
 						var copy = _factory.CreateFile(command.CopyName, file.Size);
 						parentDirectory.Children.Add(copy);
+						_timestamp.Increment();
 						Message = $"ID={copy.Id}";
 					}
 				}
@@ -236,6 +254,7 @@ namespace NameServer
 					{
 						directory.Children.Remove(file);
 						destinationDirectory.Children.Add(file);
+						_timestamp.Increment();
 					}
 					else
 					{

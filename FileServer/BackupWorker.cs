@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using Commands;
 using Commands.Serialization;
 using Files;
 using Networking;
@@ -15,12 +16,14 @@ namespace FileServer
 		private readonly object _mutex;
 		private readonly Func<INode?> _getLastTree;
 		private readonly FilePathBuilder _pathBuilder;
+		private readonly Func<Timestamp?> _getTimestamp;
 
-		public BackupWorker(object mutex, Func<INode?> getLastTree, FilePathBuilder pathBuilder)
+		public BackupWorker(object mutex, Func<INode?> getLastTree, FilePathBuilder pathBuilder, Func<Timestamp?> getTimestamp)
 		{
 			_mutex = mutex;
 			_getLastTree = getLastTree;
 			_pathBuilder = pathBuilder;
+			_getTimestamp = getTimestamp;
 		}
 
 		public void LaunchOn(int port)
@@ -43,7 +46,8 @@ namespace FileServer
 						lock (_mutex)
 						{
 							var tree = LastTree?.Clone();
-							var backupData = new BackupData(tree);
+							var timeStamp = Timestamp?.Clone();
+							var backupData = new BackupData(tree, timeStamp);
 
 							if (tree != null)
 							{
@@ -64,6 +68,7 @@ namespace FileServer
 		}
 
 		private INode? LastTree => _getLastTree();
+		private Timestamp? Timestamp => _getTimestamp();
 		
 		private IEnumerable<(int id, byte[] data)> GetFiles(INode root)
 		{
