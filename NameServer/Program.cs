@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using Commands;
 using Commands.Serialization;
 using Files;
@@ -60,57 +59,14 @@ namespace NameServer
 			var queues = Enumerable.Range(0, fileServersCount)
 				.Select(i => new ConcurrentQueue<ICommand>())
 				.ToImmutableArray();
-			var threads = new Thread[fileServersCount];
+			var threads = new FileServerThread[fileServersCount];
 
 			for (var i = 0; i < fileServersCount; i++)
 			{
 				var serverIndex = i;
 				var remote = IPEndPoint.Parse(args[i]);
-
-				threads[i] = new Thread(arg =>
-				{
-					var buffer = new byte[32000];
-
-					while (true)
-					{
-						try
-						{
-							var localAddress = IpAddressUtils.GetLocal();
-							var local = new IPEndPoint(localAddress, Port + 1 + serverIndex);
-							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)
-							{
-								SendTimeout = 500, ReceiveTimeout = 500
-							};
-							socket.Bind(local);
-							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
-							socket.Connect(remote);
-							Console.WriteLine($"Connected to file server {serverIndex + 1}.");
-
-							var commands = queues[serverIndex];
-
-							while (true)
-							{
-								if (!commands.TryDequeue(out var command))
-								{
-									continue;
-								}
-
-								Console.WriteLine($"Sending command to the file server {serverIndex + 1}...");
-								socket.SendCompletelyWithEof(command.ToBytes());
-								Console.WriteLine($"Waiting for a response from the file server {serverIndex + 1}...");
-								var response = socket.ReceiveUntilEof(buffer).To<ICommand>();
-								Responses.Enqueue(response);
-								Console.WriteLine($"Synchronized with file server {serverIndex + 1}: {response}");
-							}
-						}
-						catch (Exception e)
-						{
-							Console.WriteLine($"Disconnected from file server {serverIndex + 1}.");
-							Console.WriteLine(e);
-							Thread.Sleep(500);
-						}
-					}
-				});
+				var threadPort = Port + 1 + serverIndex;
+				threads[i] = new FileServerThread(threadPort, remote, serverIndex, Responses, queues[serverIndex]);
 			}
 
 			foreach (var thread in threads)
