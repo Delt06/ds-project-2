@@ -151,19 +151,19 @@ namespace NameServer
 			if (!(response is PayloadResponseCommand payloadResponse))
 			{
 				Console.WriteLine("Response has no payload.");
-				return true;
+				return false;
 			}
 
 			if (!payloadResponse.Root.Equals(_root))
 			{
 				Console.WriteLine("Response tree is different.");
-				return true;
+				return false;
 			}
 
 			if (!payloadResponse.Timestamp.Equals(Timestamp))
 			{
 				Console.WriteLine("Response timestamp is different.");
-				return true;
+				return false;
 			}
 
 			return true;
