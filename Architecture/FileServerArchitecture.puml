@@ -1,0 +1,17 @@
+﻿@startuml
+skinparam backgroundColor #00000000
+
+package "File Server" {
+    [Local Tree Snapshot, Timestamp]
+    TCP_Socket_NS - [Command Executor]
+    [Local File System]
+    [Load Provider]
+    
+    [Local Tree Snapshot, Timestamp] <--> [Load Provider]
+    [Local File System] <--> [Load Provider]
+    [Local File System] <--> [Command Executor] : 2. file modifications
+    [Command Executor] <--> [Local Tree Snapshot, Timestamp] : 1. validity check
+}
+
+
+@enduml

@@ -1,0 +1,15 @@
+﻿@startuml
+skinparam backgroundColor #00000000
+
+package "Name Server" {
+    TCP_Socket_Client - [Command Receiver]
+    [Tree, Timestamp]
+    [File Server Threads]
+    TCP_Socket_FileServer - [Response Queue]
+    [Response Sender] - TCP_Socket_Client
+    
+    [Command Receiver] <-right-> [Tree, Timestamp]: 1. tree modifications
+    [Command Receiver] -up-> [File Server Threads]: 2. command
+    [Response Queue] --> [Response Sender]: 3. response
+}
+@enduml

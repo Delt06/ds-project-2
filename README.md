@@ -22,6 +22,35 @@ Maintains the file/directory tree and works as a mediator between the client and
 
 When run, NameServer application requires to specify addresses of the file servers in the format IP:port
 
+## Architecture
+### High-level
+![High-level](Architecture/Pictures/HighLevelArchitecture.png)  
+The general flow is this:
+1) Client constructs a command and sends it to the NameServer.
+2) NameServer analyzes the command and propagates it to FileServers. 
+3) Each connected FileServers executes a command and provides a response.
+4) NameServer picks a consistent response and propagates it to the Client.
+
+### Client
+![Client](Architecture/Pictures/ClientArchitecture.png)  
+Client:
+1) Reads commands from the console.
+2) Constructs and sends them via socket to the NameServer.
+3) Receives and prints responses.
+
+### NameServer
+![NameServer](Architecture/Pictures/NameServerArchitecture.png)  
+When NameServer receives a command via socket, it:
+1) Updates the file tree hierarchy.
+2) Propagates the command to FileServers.
+3) Awaits a response from the FileServer if necessary and sends it to the Client via socket.
+
+### FileServer
+![FileServer](Architecture/Pictures/FileServerArchitecture.png)  
+When FileServer receives a command via socket, it:
+1) Checks that it is in consistent state.
+2) Reads from/writes to the local file system and sends a response to the NameServer via socket.  
+
 ## Docker support
 All the components of the application can be found on DockerHub:
 - [Client](https://hub.docker.com/repository/docker/deltation/dfs-client)

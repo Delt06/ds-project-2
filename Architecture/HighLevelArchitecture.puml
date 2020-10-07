@@ -1,0 +1,18 @@
+﻿@startuml
+skinparam backgroundColor #00000000
+
+package "DFS" {
+    [Client]
+    [NameServer]
+    [FileServer1]
+    [FileServer2]
+
+    [Client] --> [NameServer] : 1. command
+    [NameServer] --> [FileServer1] : 2. command
+    [NameServer] --> [FileServer2] : 2. command
+    [FileServer1] ..> [NameServer] : 3. response1
+    [FileServer2] ..> [NameServer] : 3. response2
+    [NameServer] --> [Client] : 4. pick and send the right response 
+}
+
+@enduml

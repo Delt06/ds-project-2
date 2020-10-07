@@ -1,0 +1,11 @@
+﻿@startuml
+skinparam backgroundColor #00000000
+
+package "Client" {
+    CLI - [Command Handler]
+
+    TCP_Socket - [Command Sender/Receiver]
+    [Command Sender/Receiver] --> [Command Handler] : 2. response
+    [Command Handler] --> [Command Sender/Receiver] : 1. command 
+}
+@enduml
