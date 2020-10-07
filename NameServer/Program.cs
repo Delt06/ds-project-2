@@ -104,51 +104,11 @@ namespace NameServer
 
 					if (visitor.AwaitResponse)
 					{
-						ICommand response;
-						var watch = Stopwatch.StartNew();
-
-						while (true)
-						{
-							if (!Responses.TryDequeue(out response!))
-							{
-								if (watch.ElapsedMilliseconds >= ResponseQueueTimeout)
-								{
-									response = new ResponseCommand(receivedCommand, "Timeout");
-									break;
-								}
-								continue;
-							}
-							
-							watch.Restart();
-							Console.WriteLine("Received a response...");
-							
-							if (!(response is PayloadResponseCommand payloadResponse))
-							{
-								Console.WriteLine("Response has no payload.");
-								continue;
-							}
-
-							if (!payloadResponse.Root.Equals(_root))
-							{
-								Console.WriteLine("Response tree is different.");
-								continue;
-							}
-
-							if (!payloadResponse.Timestamp.Equals(Timestamp))
-							{
-								Console.WriteLine("Response timestamp is different.");
-								continue;
-							}
-
-							break;
-						}
-
-						client.SendCompletelyWithEof(response.ToBytes());
+						ReceiveAndPickResponse(client, receivedCommand);
 					}
 					else
 					{
-						var response = new ResponseCommand(receivedCommand, visitor.Message);
-						client.SendCompletelyWithEof(response.ToBytes());
+						SendResponse(client, receivedCommand, visitor);
 					}
 				}
 			}
@@ -156,6 +116,63 @@ namespace NameServer
 			{
 				Console.WriteLine(e);
 			}
+		}
+
+		private static void ReceiveAndPickResponse(Socket client, ICommand receivedCommand)
+		{
+			ICommand response;
+			var watch = Stopwatch.StartNew();
+
+			while (true)
+			{
+				if (!Responses.TryDequeue(out response!))
+				{
+					if (watch.ElapsedMilliseconds >= ResponseQueueTimeout)
+					{
+						response = new ResponseCommand(receivedCommand, "Timeout");
+						break;
+					}
+
+					continue;
+				}
+
+				watch.Restart();
+				Console.WriteLine("Received a response...");
+
+				if (CheckConsistency(response))
+					break;
+			}
+
+			client.SendCompletelyWithEof(response.ToBytes());
+		}
+		
+		private static bool CheckConsistency(ICommand response)
+		{
+			if (!(response is PayloadResponseCommand payloadResponse))
+			{
+				Console.WriteLine("Response has no payload.");
+				return true;
+			}
+
+			if (!payloadResponse.Root.Equals(_root))
+			{
+				Console.WriteLine("Response tree is different.");
+				return true;
+			}
+
+			if (!payloadResponse.Timestamp.Equals(Timestamp))
+			{
+				Console.WriteLine("Response timestamp is different.");
+				return true;
+			}
+
+			return true;
+		}
+		
+		private static void SendResponse(Socket client, ICommand receivedCommand, ExecuteCommandVisitor visitor)
+		{
+			var response = new ResponseCommand(receivedCommand, visitor.Message);
+			client.SendCompletelyWithEof(response.ToBytes());
 		}
 	}
 }
