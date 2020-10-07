@@ -144,6 +144,7 @@ namespace NameServer
 			}
 
 			client.SendCompletelyWithEof(response.ToBytes());
+			Console.WriteLine($"Propagated {response}.");
 		}
 		
 		private static bool CheckConsistency(ICommand response)
@@ -173,6 +174,7 @@ namespace NameServer
 		{
 			var response = new ResponseCommand(receivedCommand, visitor.Message);
 			client.SendCompletelyWithEof(response.ToBytes());
+			Console.WriteLine($"Responded with {response}.");
 		}
 	}
 }

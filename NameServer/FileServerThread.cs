@@ -40,7 +40,7 @@ namespace NameServer
 						var local = new IPEndPoint(localAddress, _localPort);
 						using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)
 						{
-							SendTimeout = 500, ReceiveTimeout = 500
+							SendTimeout = 5000, ReceiveTimeout = 5000
 						};
 						socket.Bind(local);
 						Console.WriteLine($"Connecting to file server {_serverIndex + 1}...");

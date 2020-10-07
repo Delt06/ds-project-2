@@ -80,9 +80,9 @@ namespace FileServer
 					{
 						_timestamp = statefulCommand.Timestamp;
 					}
+					
+					Console.WriteLine($"Sent {response}.");
 				}
-
-				Console.WriteLine("Sent response.");
 			}
 		}
 
