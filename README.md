@@ -51,6 +51,19 @@ When FileServer receives a command via socket, it:
 1) Checks that it is in consistent state.
 2) Reads from/writes to the local file system and sends a response to the NameServer via socket.  
 
+## Communication protocols
+All the communications rely on TCP sockets.
+
+List of all sockets:
+1) NameServer socket for Client (port: 55556)
+2) Client socket for NameServer (port: 55555)
+3) NameServer sockets for FileServer (ports: 55557, 55558, etc.)
+4) FileServer socket (defined as the first command line argument)
+5) FileServer socket for backup (defined as the second command line argument)
+
+Communication totally relies on serializing/deserializing (binary) objects implementing interface `ICommand`.  
+Commands/responses are sent over TCP socket streams. Special `EOF` byte sequence is used to identify the end of the command (defined inside `Networking.Conventions`).
+
 ## Docker support
 All the components of the application can be found on DockerHub:
 - [Client](https://hub.docker.com/repository/docker/deltation/dfs-client)
@@ -98,3 +111,6 @@ If a node that was down is available now, it can rejoin the cluster. Let's assum
 sudo docker run -p 55563:55563 -p 55564:55564 deltation/file-server 55563 55564 10.0.15.11:55562
 ```
 This will cause the FileServer2 to load an up to date state from FileServer1.
+
+## Contribution
+The whole system was implemented by one person only (i.e. there is a single person in the team). 
