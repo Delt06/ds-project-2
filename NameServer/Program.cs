@@ -79,7 +79,7 @@ namespace NameServer
 							var local = new IPEndPoint(localAddress, Port + 1 + serverIndex);
 							using var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)
 							{
-								SendTimeout = 500, ReceiveTimeout = 500
+								SendTimeout = 5000, ReceiveTimeout = 5000
 							};
 							socket.Bind(local);
 							Console.WriteLine($"Connecting to file server {serverIndex + 1}...");
@@ -188,11 +188,13 @@ namespace NameServer
 						}
 
 						client.SendCompletelyWithEof(response.ToBytes());
+						Console.WriteLine($"Propagated {response}.");
 					}
 					else
 					{
 						var response = new ResponseCommand(receivedCommand, visitor.Message);
 						client.SendCompletelyWithEof(response.ToBytes());
+						Console.WriteLine($"Sent {response}.");
 					}
 				}
 			}

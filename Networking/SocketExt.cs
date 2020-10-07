@@ -6,7 +6,7 @@ namespace Networking
 {
 	public static class SocketExt
 	{
-		private const int Timeout = 1000;
+		private const int Timeout = 10000;
 		
 		public static ReadOnlySpan<byte> ReceiveUntilEof(this Socket socket, byte[] buffer)
 		{
