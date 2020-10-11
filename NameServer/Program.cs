@@ -155,12 +155,6 @@ namespace NameServer
 				return false;
 			}
 
-			if (!payloadResponse.Root.Equals(_root))
-			{
-				Console.WriteLine("Response tree is different.");
-				return false;
-			}
-
 			if (!payloadResponse.Timestamp.Equals(Timestamp))
 			{
 				Console.WriteLine("Response timestamp is different.");
